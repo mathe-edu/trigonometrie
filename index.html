@@ -650,6 +650,18 @@ body:not(.home) header.top{padding-top:18px}
 .htools .hnum{background:#EEF1F6 !important;color:var(--ink) !important}
 .drawer-head{background:#F5F7FB;color:var(--ink);border-bottom:1px solid var(--line)}
 .drawer-head .pad-x{background:#FFFFFF;color:var(--ink);border-color:var(--line)}
+.enc{margin:6px 0 4px 28px}
+.enc.done{opacity:.85}
+.enc + .jlw{margin-top:4px}
+@media (max-width: 760px){ .enc{margin-left:0} }
+.enc-sel{appearance:none;-webkit-appearance:none;font:400 1.2rem var(--serif);color:var(--ink);background:#FFFFFF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%231F5FD0' stroke-width='2.2'/%3E%3C/svg%3E") no-repeat right 12px center;border:2px solid var(--blue);border-radius:10px;padding:8px 40px 8px 14px;min-height:46px;cursor:pointer}
+.enc-sel.bad{border-color:var(--bad);background-color:var(--bad-bg)}
+.enc-sel.ok{border-color:var(--ok);background-color:var(--ok-bg);color:var(--ok);opacity:1}
+.qsvg{width:100%;max-width:300px;height:auto;justify-self:center;touch-action:none;cursor:pointer}
+.qvals{flex-direction:column;align-items:flex-start;gap:4px}
+.qfig{display:flex;flex-direction:column;align-items:center;gap:6px;justify-self:center;width:100%;max-width:300px}
+.qfig .qsvg{max-width:100%}
+.qrel{font-size:1.35rem;color:var(--ink);min-height:2.2em;line-height:2.2}
 </style>
 </head>
 <body>
@@ -2718,10 +2730,10 @@ const EX14 = { id: '14', t: 'Exercice 14', intro: 'Démontrer les identités sui
     ['g', '(sin(x)^2-sin(x)^4)/(cos(x)^2-cos(x)^4)', '1'], ['h', '(1-sin(x))/cos(x)', 'cos(x)/(1+sin(x))'], ['i', 'sin(x)/(1+cos(x))+(1+cos(x))/sin(x)', '2/sin(x)'],
     ['j', '(cos(x)+sin(x))^3', '3cos(x)+3sin(x)-2cos(x)^3-2sin(x)^3']].map(([lab, l, r]) => ({ lab, l, r })) };
 /* --- Ex 20 --- */
-const EX20 = { id: '20', t: 'Exercice 20', intro: 'Déterminer les nombres trigonométriques des angles suivants (cos, sin, tan) :', kind: 'assoc',
+const EX20 = { id: '20', t: 'Exercice 20', intro: 'Déterminer les nombres trigonométriques des angles suivants (cos, sin, tan) :', kind: 'quad',
   items: ['2π/3', '3π/4', '5π/6', '-π/3', '-π/4', '-π/6', '4π/3', '5π/4', '7π/6', '-π', '-7π/4', '-π/2'].map((t, i) => ({ lab: 'abcdefghijkl'[i], t, v: lVal(t) })) };
 /* --- Ex 21 --- */
-const EX21 = { id: '21', t: 'Exercice 21', intro: 'Déterminer les nombres trigonométriques suivants (sans calculatrice) :', kind: 'wizard',
+const EX21 = { id: '21', t: 'Exercice 21', intro: 'Déterminer les nombres trigonométriques suivants (sans calculatrice) :', kind: 'wiz2',
   items: [['cos', '-29π/6'], ['sin', '-55π/6'], ['tan', '49π/6'], ['cos', '39π'], ['cot', '34π/3'], ['sin', '-17π/2'], ['tan', '-57π/4'], ['sin', '-47π/3'], ['cos', '41π/2'], ['cot', '-61π/4'], ['cos', '-67π/3'], ['sin', '48π']]
     .map(([f, t], i) => ({ lab: 'abcdefghijkl'[i], f, t, v: lVal(t) })) };
 const LIVRE = [EX8, EX9, EX10, EX11, EX20, EX21]; /* EX14 (démonstrations) désactivé : ajouter EX14 ici pour le réactiver */
@@ -2756,8 +2768,26 @@ function lCheck(ex, it, a){
     case 'assoc': { const ty = FORMS.find(x => x[0] === a.ty), ref = REFS20.find(x => x[0] === a.ref); if (!ty || !ref || Math.abs(ty[2](ref[1]) - it.v) > 1e-9) return false;
       return ['cos', 'sin', 'tan'].every((f, j) => (a.c || [])[j] === CHAIN[a.ty][f] && lFillOk({ v: lTrig(f, it.v), ne: 1 }, (a.v || [])[j])); }
     case 'wizard': return lWizStep(it, a) >= 4;
+    case 'quad': return lQuadStep(it, a) >= 3;
+    case 'wiz2': return lW2Step(it, a) >= 4;
   }
   return false;
+}
+function lQuadDeg(it){ return norm360(Math.round(it.v * 180 / Math.PI)); }
+function lQuadRef(it){ const n = lQuadDeg(it); return [n, 180 - n, n - 180, 360 - n].filter(x => x >= 0 && x <= 90)[0]; }
+function lQuadStep(it, a){
+  if (!a || !a.mOk) return 0;
+  if (a.r !== lQuadRef(it)) return 1;
+  if (!['cos', 'sin', 'tan'].every((f, j) => lFillOk({ v: lTrig(f, it.v), ne: 1 }, (a.v || [])[j]))) return 2;
+  return 3;
+}
+function lW2Step(it, a){
+  if (!a) return 0;
+  const red = evalExpr(a.red || ''); if (red.empty || red.invalid || !red.pi || !lCong(red.v, it.v, 2 * Math.PI) || Math.abs(red.v) >= 2 * Math.PI - 1e-9) return 0;
+  if (!a.mOk) return 1;
+  if (a.r !== lQuadRef(it)) return 2;
+  if (!lFillOk({ v: lTrig(it.f, it.v), ne: 1 }, a.val)) return 3;
+  return 4;
 }
 function lWizRef(it){ const n = norm360(Math.round(it.v * 180 / Math.PI)), r = [n, 180 - n, n - 180, 360 - n].filter(x => x >= 0 && x <= 90)[0]; return REFS.find(x => Math.round(x[1] * 180 / Math.PI) === r)[0]; }
 function lWizSign(it){ const v = lTrig(it.f, it.v); return v === null ? 'ne' : Math.abs(v) < 1e-12 ? '0' : v > 0 ? '+' : '-'; }
@@ -2793,16 +2823,31 @@ function lRenderItem(ex, i){
   let h = `<div class="lhead"><span class="llab">${it.lab})</span>`;
   if (ex.kind === 'multi') h += `<span class="lq">${it.q}</span></div><div class="lctl">${EX8N.map((t, j) => `<button class="tq-chip lmulti" data-k="${K}" data-j="${j}" style="--c:var(--ink)" aria-pressed="${(a.sel || []).includes(j)}">${lTex(t)}</button>`).join('')}</div>`;
   if (ex.kind === 'measures') { const u = it.deg ? '°' : ''; h += `<span class="lq">${it.deg ? xDeg(+it.t) : lTex(it.t)}</span></div><div class="lctl lmeas"><span class="lb">positives :</span>${[0, 1, 2, 3].map(j => fillHTML(`${K}|pos|${j}`, { suf: u }, (a.pos || [])[j], 7)).join('')}</div><div class="lctl lmeas"><span class="lb">négatives :</span>${[0, 1, 2, 3].map(j => fillHTML(`${K}|neg|${j}`, { suf: u }, (a.neg || [])[j], 7)).join('')}</div>`; }
-  if (ex.kind === 'fills') h += `<span class="lq">${it.q}</span></div>${ex.id === '10' ? `<div class="jlw"><svg class="jl" id="jl-${ex.id}-${i}" viewBox="0 0 1000 150"></svg><div class="btns jlb">${Math.abs(it.v / Math.PI) > 12 ? `<button class="btn" data-jl="${K}" data-d="-10">${MINUS} 10 · 2π</button>` : ''}<button class="btn" data-jl="${K}" data-d="-1">${MINUS} 2π</button><button class="btn" data-jl="${K}" data-d="1">+ 2π</button>${Math.abs(it.v / Math.PI) > 12 ? `<button class="btn" data-jl="${K}" data-d="10">+ 10 · 2π</button>` : ''}<span class="jl-t m" id="jlt-${ex.id}-${i}"></span></div></div>` : ''}<div class="lctl">${it.f.map((f, j) => fillHTML(`${K}|v|${j}`, f, (a.v || [])[j])).join(' ')}</div>`;
+  if (ex.kind === 'fills') h += `<span class="lq">${it.q}</span></div>${ex.id === '10' ? lEncHTML(ex, i, it, a, K) : ''}${ex.id === '10' && a.enc ? `<div class="jlw"><div class="wz-t"><span class="kn">2</span>Retire ou ajoute des tours complets de 2π.</div><svg class="jl" id="jl-${ex.id}-${i}" viewBox="0 0 1000 150"></svg><div class="btns jlb">${Math.abs(it.v / Math.PI) > 12 ? `<button class="btn" data-jl="${K}" data-d="-10">${MINUS} 10 · 2π</button>` : ''}<button class="btn" data-jl="${K}" data-d="-1">${MINUS} 2π</button><button class="btn" data-jl="${K}" data-d="1">+ 2π</button>${Math.abs(it.v / Math.PI) > 12 ? `<button class="btn" data-jl="${K}" data-d="10">+ 10 · 2π</button>` : ''}<span class="jl-t m" id="jlt-${ex.id}-${i}"></span></div></div>` : ''}<div class="lctl">${it.f.map((f, j) => fillHTML(`${K}|v|${j}`, f, (a.v || [])[j])).join(' ')}</div>`;
   if (ex.kind === 'read') h += `<span class="lq">${it.q}</span></div><div class="lread"><div><div class="btns" style="margin:0 0 6px"><button class="btn" data-zoom="${K}">Vue large</button><button class="btn" data-prot="${K}" aria-pressed="${a.pr === 'neg'}">Rapporteur négatif</button><button class="btn" data-nudge="${K}" data-d="-0.5" aria-label="Tourner M de −0,5°">◀ 0,5°</button><button class="btn" data-nudge="${K}" data-d="0.5" aria-label="Tourner M de +0,5°">0,5° ▶</button></div><svg class="rdsvg" id="rd-${ex.id}-${i}" data-k="${K}" viewBox="-1.25 -1.25 2.5 2.5"></svg><p class="hint" id="rdang-${ex.id}-${i}"></p></div><div class="lctl lcol">${['cos', 'sin', 'tan', 'cot'].map((f, j) => '<span class="rrow">' + fillHTML(`${K}|v|${j}`, { lab: `${f}(<i>α</i>) ≈` }, (a.v || [])[j], 7) + '</span>').join('')}<div class="btns"><button class="btn" data-calc="${K}">Calculatrice</button></div><div class="lcalc" id="calc-${ex.id}-${i}"></div></div></div>`;
   if (ex.kind === 'assoc') h += `<span class="lq"><i>α</i> = ${lTex(it.t)}</span></div><div class="lctl"><span>${lTex(it.t)} =</span>${FORMS.map(([k, f]) => `<button class="tq-chip lpick lform" data-k="${K}" data-f="ty" data-v="${k}" style="--c:#0E8A8A" aria-pressed="${a.ty === k}">${f}</button>`).join('')}</div><div class="lctl"><span>avec ${BOX} =</span>${REFS20.map(([k]) => `<button class="tq-chip lpick" data-k="${K}" data-f="ref" data-v="${k}" style="--c:#0E8A8A" aria-pressed="${a.ref === k}">${xTex(k === '0' ? '0' : k)}</button>`).join('')}<span class="lprev" id="lprev-${ex.id}-${i}">${a.ty && a.ref ? `${lTex(it.t)} = ${formHTML(a.ty, a.ref)}` : ''}</span></div>
     ${lFormOk(it, a) ? `<div class="chain">${['cos', 'sin', 'tan'].map((f, j) => `<div class="ch-r"><span>${f}(${lTex(it.t)}) = ${f}(${formHTML(a.ty, a.ref)}) =</span>${CH_OPT[f].map(k => `<button class="tq-chip lchain" data-k="${K}" data-r="${j}" data-v="${k}" style="--c:#0E8A8A" aria-pressed="${(a.c || [])[j] === k}">${chHTML(k, a.ref)}</button>`).join('')}<span>=</span>${fillHTML(`${K}|v|${j}`, { ne: f === 'tan' }, (a.v || [])[j])}</div>`).join('')}</div>` : (a.ty && a.ref ? '<p class="hint" style="margin-left:28px">Cette écriture n’est pas égale à l’angle. Essaie une autre forme.</p>' : '')}`;
+  if (ex.kind === 'quad') { const step = lQuadStep(it, a), dim = n => step < n ? ' dim' : '';
+    h += `<span class="lq"><i>α</i> = ${lTex(it.t)}</span></div><div class="wiz"><div class="wiz-steps">
+      <div class="wz"><div class="wz-t"><span class="kn">1</span>Touche le cercle à l’endroit du point <i>M</i> associé à <i>α</i>.</div></div>
+      <div class="wz${dim(1)}"><div class="wz-t"><span class="kn">2</span>Touche l’angle associé dans le premier quadrant.</div></div>
+      <div class="wz${dim(2)}"><div class="wz-t"><span class="kn">3</span>Valeurs exactes :</div><div class="wz-c qvals">${['cos', 'sin', 'tan'].map((f, j) => `<span class="rrow">${fillHTML(`${K}|v|${j}`, { lab: `${f}(${lTex(it.t)}) =`, ne: f === 'tan' }, (a.v || [])[j])}</span>`).join('')}</div></div>
+      </div><div class="qfig"><svg class="qsvg" id="qs-${ex.id}-${i}" data-k="${K}" viewBox="-1.45 -1.45 2.9 2.9"></svg><div class="qrel m" id="qr-${ex.id}-${i}"></div></div></div>`; }
+  if (ex.kind === 'wiz2') { const step = lW2Step(it, a), dim = n => step < n ? ' dim' : '';
+    h += `<span class="lq">${it.f}(${lTex(it.t)})</span></div><div class="wiz"><div class="wiz-steps">
+      <div class="wz"><div class="wz-t"><span class="kn">1</span>Enlève ou ajoute des tours complets (angles égaux).</div><div class="wz-c">${it.f}(${lTex(it.t)}) = ${it.f}(${fillHTML(`${K}|red`, {}, a.red, 7)})</div></div>
+      <div class="wz${dim(1)}"><div class="wz-t"><span class="kn">2</span>Touche le cercle à l’endroit du point <i>M</i> associé à cet angle.</div></div>
+      <div class="wz${dim(2)}"><div class="wz-t"><span class="kn">3</span>Touche l’angle associé dans le premier quadrant.</div></div>
+      <div class="wz${dim(3)}"><div class="wz-t"><span class="kn">4</span>Valeur exacte :</div><div class="wz-c">${it.f}(${lTex(it.t)}) = ${fillHTML(`${K}|val`, { ne: 1 }, a.val, 7)}</div></div>
+      </div><div class="qfig"><svg class="qsvg" id="qs-${ex.id}-${i}" data-k="${K}" viewBox="-1.45 -1.45 2.9 2.9"></svg><div class="qrel m" id="qr-${ex.id}-${i}"></div></div></div>`; }
   if (ex.kind === 'wizard') { h += `<span class="lq">${it.f}(${lTex(it.t)})</span></div>` + lWizHTML(ex, i); }
   h += `<div class="exo-row" id="lrow-${ex.id}-${i}"><button class="btn primary" data-lc="${K}">Vérifier</button>${lStatusHTML(st)}</div>`;
   li.innerHTML = h;
   li.querySelectorAll('input.fill').forEach(inp => { wrapFill(inp); inp.classList.add('math'); inp.setAttribute('inputmode', 'none'); refreshBlank(inp); });
   if (ex.kind === 'read') lReadDraw(ex, i);
   if (ex.id === '10') lJumpDraw(ex, i);
+  if (ex.kind === 'wiz2') { lQuadDraw(ex, i); if (lW2Step(it, st.a) < 3) li.querySelectorAll('[data-lk$="|val"], [data-ne$="|val"]').forEach(x => { x.disabled = true; }); }
+  if (ex.kind === 'quad') { lQuadDraw(ex, i); if (lQuadStep(it, st.a) < 2) li.querySelectorAll('input.fill, .ne-b').forEach(x => { x.disabled = true; }); }
   if (ex.kind === 'wizard') { lWizDraw(ex, i); if (lWizStep(it, st.a) < 3) li.querySelectorAll('[data-lk$="|val"], [data-ne$="|val"]').forEach(x => { x.disabled = true; }); }
 }
 /* read the current answer of an item from the DOM */
@@ -2813,13 +2858,15 @@ function lCollect(ex, i){
   if (ex.kind === 'measures') { a.pos = [0, 1, 2, 3].map(j => val(`${K}|pos|${j}`)); a.neg = [0, 1, 2, 3].map(j => val(`${K}|neg|${j}`)); }
   if (ex.kind === 'fills' || ex.kind === 'assoc') a.v = (ex.kind === 'fills' ? ex.items[i].f : [0, 1, 2]).map((_, j) => val(`${K}|v|${j}`));
   if (ex.kind === 'read') a.v = [0, 1, 2, 3].map(j => val(`${K}|v|${j}`));
-  if (ex.kind === 'wizard') { const r = li.querySelector('[data-lk$="|red"]'), v = li.querySelector('[data-lk$="|val"]'); if (r) a.red = r.value; if (v || li.querySelector('[data-ne$="|val"]')) a.val = val(`${K}|val`); }
+  if (ex.kind === 'quad') a.v = [0, 1, 2].map(j => val(`${K}|v|${j}`));
+  if (ex.kind === 'wizard' || ex.kind === 'wiz2') { const r = li.querySelector('[data-lk$="|red"]'), v = li.querySelector('[data-lk$="|val"]'); if (r) a.red = r.value; if (v || li.querySelector('[data-ne$="|val"]')) a.val = val(`${K}|val`); }
   st.a = a; return a;
 }
 function lMarkFills(ex, i){
   const it = ex.items[i], st = lStateOf(ex, i), a = st.a || {}, li = $(`#li-${ex.id}-${i}`), K = `${ex.id}|${i}`;
   const mark = (key, ok) => { const inp = li.querySelector(`input[data-lk="${key}"]`); if (inp && !inp.disabled) setState(inp, ok ? 'ok' : 'bad'); const nb = li.querySelector(`[data-ne="${key}"]`); if (nb && nb.getAttribute('aria-pressed') === 'true') { nb.classList.toggle('ok', ok); nb.classList.toggle('bad', !ok); } };
   if (ex.kind === 'fills') it.f.forEach((f, j) => mark(`${K}|v|${j}`, lFillOk(f, (a.v || [])[j])));
+  if (ex.kind === 'quad') ['cos', 'sin', 'tan'].forEach((f, j) => mark(`${K}|v|${j}`, lFillOk({ v: lTrig(f, it.v), ne: 1 }, (a.v || [])[j])));
   if (ex.kind === 'assoc' && lFormOk(it, a)) li.querySelectorAll('.lchain').forEach(b => { b.classList.remove('ok', 'bad'); if (b.getAttribute('aria-pressed') === 'true') b.classList.add(b.dataset.v === CHAIN[a.ty][['cos', 'sin', 'tan'][+b.dataset.r]] ? 'ok' : 'bad'); });
   if (ex.kind === 'assoc') ['cos', 'sin', 'tan'].forEach((f, j) => mark(`${K}|v|${j}`, lFillOk({ v: lTrig(f, it.v), ne: 1 }, (a.v || [])[j])));
   if (ex.kind === 'read') { const r = rad(it.d); ['cos', 'sin', 'tan', 'cot'].forEach((f, j) => { const v = lTrig(f, r), u = evalExpr((a.v || [])[j] || ''), tol = j < 2 ? 0.05 : Math.max(0.1, 0.08 * Math.abs(v)); mark(`${K}|v|${j}`, !u.empty && !u.invalid && Math.abs(u.v - v) <= tol); }); }
@@ -2836,6 +2883,17 @@ function lEx8Line(){
   const done = EX8.items.some((_, i) => lStateOf(EX8, i).ok);
   if (done) EX8N.forEach((t, j) => { const v = lVal(t); h += `<circle cx="${X(v)}" cy="${Y}" r="6" fill="var(--ink)"/><text x="${X(v)}" y="${Y - (j % 2 ? 40 : 28)}" text-anchor="middle" font-family="var(--serif)" font-size="15" fill="var(--ink)">${t.replace('-', MINUS).replace('.', ',')}</text>`; });
   svg.innerHTML = h;
+}
+/* Ex 10: encadrement first */
+function lEncParts(it){ const m = it.q.match(/frac"><span>(\d+)π<\/span><span>(\d+)</); const neg = it.v < 0; return m ? { p: (neg ? -1 : 1) * +m[1], q: +m[2] } : null; }
+function lEncHTML(ex, i, it, a, K){
+  const pq = lEncParts(it); if (!pq) return '';
+  const k0 = Math.floor(pq.p / pq.q), off = 2 + ((i * 5) % 7), ks = Array.from({ length: 11 }, (_, n) => k0 - off + n);
+  const kp = k => k === 0 ? '0' : piText(k, 1).replace('-', MINUS);
+  const ok = a.enc;
+  return `<div class="enc"><div class="wz-t"><span class="kn">1</span>Encadre <i>α</i> entre deux multiples entiers consécutifs de π.</div>
+    <div class="wz-c"><select class="enc-sel${ok ? ' ok' : ''}" data-encsel="${K}" aria-label="Encadrement de α" ${ok ? 'disabled' : ''}><option value="">Choisir…</option>${ks.map(k => `<option value="${k}" ${String(a.lo) === String(k) ? 'selected' : ''}>${kp(k)} &lt; α &lt; ${kp(k + 1)}</option>`).join('')}</select>
+    <span class="exo-row" id="encrow-${ex.id}-${i}" style="margin:0"></span></div></div>`;
 }
 /* Ex 10 number line with jumps */
 function lJumpDraw(ex, i){
@@ -2873,6 +2931,54 @@ function lReadDraw(ex, i){
   svg.innerHTML = h;
   $(`#rdang-${ex.id}-${i}`).innerHTML = typeof a.m === 'number' ? `rapporteur : ${String(neg && a.m > 0 ? a.m - 360 : a.m).replace('-', MINUS).replace('.', ',')}°` : 'Touche le cercle pour placer <i>M</i>.';
 }
+/* Ex 20: place M, then the associated first-quadrant angle */
+function lQuadDraw(ex, i){
+  const it = ex.items[i], a = lStateOf(ex, i).a || {}, step = ex.kind === 'wiz2' ? Math.max(0, lW2Step(it, a) - 1) : lQuadStep(it, a), svg = $(`#qs-${ex.id}-${i}`); if (!svg) return;
+  const d = ex.kind === 'wiz2' && lW2Step(it, a) >= 1 ? evalExpr(a.red).v * 180 / Math.PI : it.v * 180 / Math.PI, n = lQuadDeg(it), q = Math.floor(n / 90);
+  const sec = a1 => { const [x1, y1] = P(a1), [x2, y2] = P(a1 + 90); return `M0,0 L${x1},${y1} A1,1 0 0,0 ${x2},${y2} Z`; };
+  let h = '';
+  if (step >= 1 && n % 90) h += `<path d="${sec(q * 90)}" fill="${SG_QF[q]}"/>`;
+  h += `<line class="axis" x1="-1.35" y1="0" x2="1.35" y2="0"/><line class="axis" x1="0" y1="1.35" x2="0" y2="-1.35"/><circle class="unit" cx="0" cy="0" r="1"/>`;
+  for (let k = 0; k < 360; k += 15) { const [x1, y1] = P(k, k % 30 === 0 || k % 45 === 0 ? 0.94 : 0.97), [x2, y2] = P(k, 1.03); h += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--ink-2)" stroke-width=".01"/>`; }
+  h += `<circle class="dot" r=".024"/><text class="lbl-i" x="1.05" y="-0.06" style="font-size:.11px">I</text>`;
+  if (typeof a.tap === 'number' && !a.mOk) { const [x, y] = P(a.tap); h += `<circle cx="${x}" cy="${y}" r=".05" fill="var(--bad)"/>`; }
+  if (step >= 1) { const [x, y] = P(d), c = Math.cos(it.v), s = Math.sin(it.v);
+    if (step >= 2) h += `<line x1="${x}" y1="${y}" x2="${x}" y2="0" stroke="var(--blue)" stroke-width=".01" stroke-dasharray=".04 .03"/><circle cx="${c}" cy="0" r=".035" fill="var(--blue)"/><line x1="${x}" y1="${y}" x2="0" y2="${y}" stroke="var(--red)" stroke-width=".01" stroke-dasharray=".04 .03"/><circle cx="0" cy="${-s}" r=".035" fill="var(--red)"/>`;
+    h += `<path d="${arcD(0, d, 0.22)}" fill="none" stroke="#0E8A8A" stroke-width=".016" marker-end="url(#arT)"/><line x1="0" y1="0" x2="${x}" y2="${y}" stroke="#0E8A8A" stroke-width=".014"/><circle cx="${x}" cy="${y}" r=".055" fill="#0E8A8A"/><text class="lbl-i" x="${P(d, 1.17)[0]}" y="${P(d, 1.17)[1]}" text-anchor="middle" dominant-baseline="central" style="fill:#0E8A8A;font-size:.12px">M</text>`; }
+  if (step >= 2) { const r = a.r, [x1, y1] = P(r), [x, y] = P(d);
+    h += `<line x1="${x}" y1="${y}" x2="${x1}" y2="${y1}" stroke="var(--ink-2)" stroke-width=".008" stroke-dasharray=".04 .03"/><line x1="0" y1="0" x2="${x1}" y2="${y1}" stroke="var(--angle)" stroke-width=".014"/><circle cx="${x1}" cy="${y1}" r=".05" fill="var(--angle)"/>`;
+    const [lx, ly] = P(r, 1.27); h += r ? svgFracPi(lx, ly, r, 180, { size: 0.12, fill: 'var(--angle)' }) : `<text x="${lx}" y="${ly}" font-family="var(--serif)" font-size=".12" fill="var(--angle)" text-anchor="middle" dominant-baseline="central">0</text>`; }
+  else if (typeof a.rtap === 'number') { const [x, y] = P(a.rtap); h += `<circle cx="${x}" cy="${y}" r=".05" fill="var(--bad)"/>`; }
+  const rel = $(`#qr-${ex.id}-${i}`);
+  if (rel) {
+    let txt = '';
+    if (step >= 2 && a.r % 90) {
+      const th = d / 180, rr = a.r / 180, R = piHTML(a.r, 180), TH = (() => { const f = toFrac(th, 60); return f ? piHTML(f.p, f.q) : ''; })();
+      const forms = [[rr, R], [-rr, `${MINUS}(${R})`], [1 - rr, `π ${MINUS} ${R}`], [1 + rr, `π + ${R}`], [-1 + rr, `${MINUS}π + ${R}`], [-1 - rr, `${MINUS}π ${MINUS} ${R}`], [2 - rr, `2π ${MINUS} ${R}`], [rr - 2, `${R} ${MINUS} 2π`]];
+      const f = forms.find(([v]) => Math.abs(v - th) < 1e-9);
+      if (f && TH) txt = `${TH} = ${f[1]}`;
+    }
+    rel.innerHTML = txt;
+  }
+  svg.innerHTML = h;
+}
+$('#lEx').addEventListener('pointerdown', e => {
+  const svg = e.target.closest('svg.qsvg'); if (!svg) return;
+  const [ex, i] = svg.dataset.k.split('|'), E = LIVRE.find(x => x.id === ex), it = E.items[+i], st = lStateOf(E, +i); if (st.ok) return;
+  const p = svgPoint(svg, e); if (Math.hypot(p.x, p.y) < 0.25) return;
+  const t = norm360(Math.atan2(-p.y, p.x) * 180 / Math.PI), a = lCollect(E, +i), row = $(`#lrow-${ex}-${i}`), step = E.kind === 'wiz2' ? lW2Step(it, a) - 1 : lQuadStep(it, a);
+  if (step < 0) { lamp(row, 'y'); return; }
+  if (step === 0) {
+    const n = lQuadDeg(it), onAxis = n % 90 === 0, dd = Math.min(Math.abs(t - n), 360 - Math.abs(t - n));
+    const ok = onAxis ? dd <= 12 : Math.floor(t / 90) === Math.floor(n / 90) && t % 90 > 3 && t % 90 < 87;
+    a.tap = t; if (ok) a.mOk = true; st.a = a; lSave(); lRenderItem(E, +i); lamp($(`#lrow-${ex}-${i}`), ok ? 'g' : 'r'); return;
+  }
+  if (step === 1) {
+    if (t > 100 && t < 350) { lamp(row, 'r'); return; }
+    const tt = t > 180 ? t - 360 : t, snap = [0, 30, 45, 60, 90].reduce((b, v) => Math.abs(v - tt) < Math.abs(b - tt) ? v : b, 0), ok = snap === lQuadRef(it);
+    if (ok) a.r = snap; else a.rtap = snap; st.a = a; lSave(); lRenderItem(E, +i); lamp($(`#lrow-${ex}-${i}`), ok ? 'g' : 'r');
+  }
+});
 /* Ex 21 wizard */
 function lWizHTML(ex, i){
   const it = ex.items[i], a = lStateOf(ex, i).a || {}, step = lWizStep(it, a), K = `${ex.id}|${i}`;
@@ -2979,6 +3085,7 @@ $('#lEx').addEventListener('click', e => {
     const [exId, si] = c.dataset.lc.split('|'), i = +si, E = LIVRE.find(x => x.id === exId), st = lStateOf(E, i);
     lCollect(E, i); st.tries++; const ok = lCheck(E, E.items[i], st.a); st.ok = ok;
     if (E.kind === 'wizard') { lSave(); lRenderItem(E, i); lamp($(`#lrow-${exId}-${i}`), ok ? 'g' : lWizStep(E.items[i], st.a) > 0 ? 'y' : 'r'); lBilan(); return; }
+    if (E.kind === 'wiz2') { const s0 = lW2Step(E.items[i], st.a); lSave(); lRenderItem(E, i); const li2 = $(`#li-${exId}-${i}`), rin = li2.querySelector('[data-lk$="|red"]'); if (rin) setState(rin, s0 >= 1 ? 'ok' : 'bad'); if (s0 === 3) { const vin = li2.querySelector('[data-lk$="|val"]'); if (vin && !vin.disabled) setState(vin, 'bad'); } lamp($(`#lrow-${exId}-${i}`), ok ? 'g' : (s0 === 0 || s0 === 3) ? 'r' : 'y'); lBilan(); return; }
     lMarkFills(E, i); lSave();
     const row = $(`#lrow-${exId}-${i}`); row.querySelectorAll('.xst').forEach(x => x.remove()); row.insertAdjacentHTML('beforeend', lStatusHTML(st)); lamp(row, ok ? 'g' : 'r');
     if (E.kind === 'multi') lEx8Line();
@@ -2986,6 +3093,13 @@ $('#lEx').addEventListener('click', e => {
   }
 });
 $('#lEx').addEventListener('pointerdown', e => { const svg = e.target.closest('svg.rdsvg'); if (!svg) return; const [ex, i] = svg.dataset.k.split('|'), E = LIVRE.find(x => x.id === ex), st = lStateOf(E, +i); if (st.ok) return; const p = svgPoint(svg, e); if (Math.hypot(p.x, p.y) < 0.2) return; const a = lCollect(E, +i); a.m = Math.round(norm360(Math.atan2(-p.y, p.x) * 180 / Math.PI) * 2) / 2; st.a = a; lSave(); lReadDraw(E, +i); });
+$('#lEx').addEventListener('change', e => {
+  const sel = e.target.closest('select[data-encsel]'); if (!sel) return;
+  const [ex, i] = sel.dataset.encsel.split('|'), E = LIVRE.find(x => x.id === ex), it = E.items[+i], st = lStateOf(E, +i), a = lCollect(E, +i), pq = lEncParts(it);
+  a.lo = sel.value; st.a = a;
+  if (sel.value !== '' && +sel.value === Math.floor(pq.p / pq.q)) { a.enc = true; lSave(); lRenderItem(E, +i); return; }
+  lSave(); sel.classList.add('bad'); if (sel.value !== '') lamp($(`#encrow-${ex}-${i}`), 'r');
+});
 $('#lEx').addEventListener('input', e => { const li = e.target.closest('.li'); if (!li) return; const E = LIVRE.find(x => x.id === li.dataset.ex); lCollect(E, +li.dataset.i); clearLamps(li); lSave(); });
 
 /* identity + bilan */
@@ -3018,12 +3132,15 @@ function lAnsHTML(ex, it, a){
     case 'fills': return it.f.map((f, j) => `${f.lab} ${R((a.v || [])[j])}`).join(' &nbsp; ');
     case 'read': return `M à ${typeof a.m === 'number' ? a.m + '°' : '…'} ; ` + ['cos', 'sin', 'tan', 'cot'].map((f, j) => `${f} ≈ ${R((a.v || [])[j])}`).join(' ; ');
     case 'assoc': { return `${lTex(it.t)} = ${formHTML(a.ty, a.ref)}<br>` + ['cos', 'sin', 'tan'].map((f, j) => `${f} = ${(a.c || [])[j] ? chHTML(a.c[j], a.ref) : '…'} = ${R((a.v || [])[j])}`).join('<br>'); }
+    case 'quad': return lFigHTML(ex, it) + `M ${a.mOk ? '✓' : '…'} ; réf. ${typeof a.r === 'number' ? (a.r ? xTex(piText(a.r, 180)) : '0') : '…'} ; ` + ['cos', 'sin', 'tan'].map((f, j) => `${f} = ${R((a.v || [])[j])}`).join(' ; ');
+    case 'wiz2': return lFigHTML(ex, it) + `${R(a.red)} ; M ${a.mOk ? '✓' : '…'} ; réf. ${typeof a.r === 'number' ? (a.r ? xTex(piText(a.r, 180)) : '0') : '…'} ; ${it.f} = ${R(a.val)}`;
     case 'wizard': return `${R(a.red)} → réf. ${a.ref ? xTex(a.ref === '0' ? '0' : a.ref) : '…'} → ${it.f} = ${R(a.val)}`;
     case 'proof': if (a.mode === 'hand') { let img = null; try { img = localStorage.getItem(lHandKey(it.lab)); } catch (e) {} return img ? `<img src="${img}" alt="démonstration manuscrite" style="width:100%;max-width:440px;border:1px solid #D3D9E5;border-radius:6px;background:#FFFFFF">` : '<i>manuscrit (voir le PDF)</i>'; }
       return (a.lines || []).length ? `<div class="m">${TP.render(it.l)}</div>` + a.lines.map(l => `<div class="m">= ${TP.render(l.s) || l.s}${l.j ? ` <span style="font:400 11px var(--sans);color:#4F5B78">(${l.j})</span>` : ''}</div>`).join('') : '—';
   }
   return '—';
 }
+function lFigHTML(ex, it){ const k = `${ex.id}|${ex.items.indexOf(it)}`, c = lImgCache[k]; return c ? `<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><img src="${c.png}" alt="" style="width:110px;height:110px;border:1px solid #E3E8F1;border-radius:6px">${c.rel ? `<span style="font-size:14px">${c.rel}</span>` : ''}</div>` : ''; }
 function lReportHTML(data, code){
   const EXS = data.ex ? LIVRE.filter(e => e.id === data.ex) : LIVRE;
   const d = new Date(data.t), ds = d.toLocaleDateString('fr-LU') + ' ' + d.toLocaleTimeString('fr-LU', { hour: '2-digit', minute: '2-digit' });
@@ -3032,9 +3149,22 @@ function lReportHTML(data, code){
   return `<div class="rep"><h1>Trigonométrie : ${data.ex ? 'exercice ' + data.ex : 'exercices du livre'}</h1><div class="sub">Chapitre 2 · 3C LMRL · © Luca Notarnicola</div>
     <div class="who"><b>Élève</b><span>${data.id.prenom} ${data.id.nom}</span><b>Date</b><span>${ds}</span></div>
     <table><tr><th>Exercice</th><th>Réussi</th><th>Essais</th></tr>${EXS.map(ex => `<tr><td>${ex.t}</td><td>${ex.items.filter((_, i) => okOf(ex, i)).length} / ${ex.items.length}</td><td>${ex.items.reduce((n, _, i) => n + stOf(ex, i).tries, 0)}</td></tr>`).join('')}</table>
-    ${EXS.map(ex => `<h3>${ex.t}</h3>${ex.items.map((it, i) => { const s = stOf(ex, i), ok = okOf(ex, i), q = it.q || (ex.kind === 'measures' ? (it.deg ? xDeg(+it.t) : lTex(it.t)) : ex.kind === 'proof' ? `<span class="m">${TP.render(it.l)} = ${TP.render(it.r)}</span>` : ex.kind === 'assoc' ? lTex(it.t) : ex.kind === 'wizard' ? `${it.f}(${lTex(it.t)})` : '');
+    ${EXS.map(ex => `<h3>${ex.t}</h3>${ex.items.map((it, i) => { const s = stOf(ex, i), ok = okOf(ex, i), q = it.q || (ex.kind === 'measures' ? (it.deg ? xDeg(+it.t) : lTex(it.t)) : ex.kind === 'proof' ? `<span class="m">${TP.render(it.l)} = ${TP.render(it.r)}</span>` : (ex.kind === 'assoc' || ex.kind === 'quad') ? lTex(it.t) : (ex.kind === 'wizard' || ex.kind === 'wiz2') ? `${it.f}(${lTex(it.t)})` : '');
       const ah = lAnsHTML(ex, it, s.a), isImg = ah.startsWith('<img'); return `<div class="it"><span>${it.lab})</span><span>${q}</span><span>${isImg ? '<i>démonstration manuscrite ci-dessous</i>' : ah}</span><span style="color:${ok ? '#1C8650' : s.a && s.a.mode === 'hand' ? '#1F5FD0' : s.tries ? '#CF2438' : '#9AA3B5'};font-weight:700">${ok ? '✓' : s.a && s.a.mode === 'hand' ? (s.a.handDone ? '✎' : '—') : s.tries ? '✗' : '—'}</span></div>${isImg ? `<div style="margin:6px 0 14px 32px">${ah.replace('max-width:440px', 'max-width:100%')}</div>` : ''}`; }).join('')}`).join('')}
     <div class="code">Code de vérification : <b>${code}</b></div></div>`;
+}
+let lImgCache = {};
+function lFigSVG(exId, i){
+  const svg = $(`#qs-${exId}-${i}`); if (!svg || !svg.innerHTML) return null;
+  const cs = getComputedStyle(document.documentElement), col = n => (cs.getPropertyValue(n).trim() || '#14213D').replace(/"/g, "'");
+  let inner = svg.innerHTML.replace(/var\((--[a-z0-9-]+)\)/g, (m, n) => col(n));
+  const ink = col('--ink'), ink2 = col('--ink-2');
+  const defs = `<defs><marker id="arT" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0E8A8A"/></marker><marker id="arA" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="${col('--angle')}"/></marker></defs>`;
+  const style = `<style>.axis{stroke:${ink2};stroke-width:.008}.unit{fill:none;stroke:${ink};stroke-width:.012}.dot{fill:${ink}}.lbl-i{fill:${ink};font-family:Georgia,serif;font-style:italic;font-size:.13px}text{font-family:Georgia,serif}</style>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="${svg.getAttribute('viewBox')}"><rect x="-2" y="-2" width="4" height="4" fill="#FFFFFF"/>${defs}${style}${inner}</svg>`;
+}
+function lSvgToPng(str, size){
+  return new Promise(res => { try { const img = new Image(); img.onload = () => { try { const c = document.createElement('canvas'); c.width = size; c.height = size; c.getContext('2d').drawImage(img, 0, 0, size, size); res(c.toDataURL('image/png')); } catch (e) { res(''); } }; img.onerror = () => res(''); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str); } catch (e) { res(''); } });
 }
 async function lExportPdf(exId){
   const msg = $('#pdfmsg-' + exId);
@@ -3045,6 +3175,9 @@ async function lExportPdf(exId){
     await xLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     const data = { v: 2, id: L.id, t: Date.now(), ex: exId, st: { [exId]: L.st[exId] || [] } };
     const json = JSON.stringify(data), code = await xCode(json), b64 = xB64(json);
+    lImgCache = {};
+    const EXd = LIVRE.find(e => e.id === exId);
+    if (EXd && (EXd.kind === 'quad' || EXd.kind === 'wiz2')) for (let i = 0; i < EXd.items.length; i++) { const st = (L.st[exId] || [])[i]; if (st && st.a && st.a.mOk) { const sv = lFigSVG(exId, i); if (sv) { const png = await lSvgToPng(sv, 300); if (png) lImgCache[`${exId}|${i}`] = { png, rel: ($(`#qr-${exId}-${i}`) || {}).innerHTML || '' }; } } }
     const host = $('#xReportHost'); host.innerHTML = lReportHTML(data, code);
     const canvas = await html2canvas(host.firstElementChild, { scale: 2, backgroundColor: '#FFFFFF' });
     const { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -3057,7 +3190,7 @@ async function lExportPdf(exId){
     }
     pdf.addPage(); pdf.setFontSize(11); pdf.text('Code de verification : ' + code, m, 20);
     pdf.setFontSize(7); pdf.text('Donnees (pour l\'enseignant) :', m, 30); pdf.text(pdf.splitTextToSize(b64, iw), m, 35);
-    host.innerHTML = '';
+    host.innerHTML = ''; lImgCache = {};
     const blob = pdf.output('blob'), name = `Trigonometrie_Ex${exId}_${L.id.nom}_${L.id.prenom}.pdf`.replace(/\s+/g, '_');
     let saved = false;
     if (window.claude && typeof window.claude.use === 'function') { const dl = await window.claude.use('downloads'); if (dl) { try { await dl.save({ filename: name, data: blob }); saved = true; } catch (e) { msg.textContent = e && e.code === 'declined' ? 'Téléchargement annulé.' : 'Le téléchargement n’est pas disponible ici.'; return; } } }
